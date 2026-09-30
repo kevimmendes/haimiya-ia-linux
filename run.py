@@ -13,16 +13,25 @@ import random
 import threading
 import os
 import base64
-import tkinter as tk
 import subprocess  # Adicionado
 import sys         # Adicionado
-from tkinter import ttk
 from datetime import datetime
 from groq import Groq
 from openai import OpenAI  # Apenas para o LLM principal Kimi via NVIDIA
 from dotenv import load_dotenv
 from Arcana import platform_shim
 from Arcana import seguranca
+
+# O painel e opcional: python3-tk nao vem no Python oficial, e sem sessao
+# grafica o tk.Tk() levanta TclError. Nenhum dos dois pode derrubar o run.py.
+try:
+    import tkinter as tk
+    from tkinter import ttk
+    TEM_TK = True
+except ImportError:
+    tk = None
+    ttk = None
+    TEM_TK = False
 
 try:
     import keyboard
@@ -212,6 +221,16 @@ TOOLS_SYSTEM = None
 MODO_FERRAMENTAS = os.getenv("MODO_FERRAMENTAS", "0").strip() not in ("0", "false", "False", "", "no")
 
 def abrir_gui_modelos():
+    if not TEM_TK:
+        print(" Painel indisponivel: o modulo 'tkinter' nao esta instalado.")
+        print(" No Ubuntu/Debian: sudo apt install python3-tk")
+        return
+    if not platform_shim.TEM_ECRA:
+        print(" Painel indisponivel: nao ha sessao grafica (DISPLAY/WAYLAND_DISPLAY).")
+        print(" Num servidor ou SSH, muda a estas opcoes editando direto o brain.json:")
+        print(f"   {BRAIN_FILE}")
+        return
+
     def salvar():
         if os.path.exists(BRAIN_FILE):
             with open(BRAIN_FILE, 'r', encoding='utf-8') as f: data = json.load(f)
@@ -1330,12 +1349,14 @@ async def main():
     platform_shim.avisar_dependencias()
     print()
 
-    if platform_shim.TEM_ECRA:
+    painel_ok, painel_motivo = RemGUI.disponivel()
+    if painel_ok:
         print("🎨 Iniciando Painel de Configurações em segundo plano (Pressione F4 para acessar)...")
         gui_thread = threading.Thread(target=RemGUI.iniciar_gui_loop, args=(nome_ai,), daemon=True)
         gui_thread.start()
     else:
-        print("🎨 Painel de Configurações ignorado: tkinter precisa de uma sessão gráfica.")
+        print(f"🎨 Painel de Configurações ignorado: {painel_motivo}.")
+        print("    Para ligar: sudo apt install python3-tk e arranca dentro de uma sessão gráfica.")
 
     # 🔥 REGISTRANDO OS ATALHOS GLOBAIS ABSOLUTOS (AGORA APENAS UMA ÚNICA VEZ!)
     if keyboard is not None:
@@ -1424,7 +1445,7 @@ async def main():
 
     # 🔥 INICIA O SISTEMA DE FERRAMENTAS
     global TOOLS_SYSTEM
-    TOOLS_SYSTEM = ToolsSystem(output_callback=print, vision_client=client_vision)
+    TOOLS_SYSTEM = ToolsSystem(output_callback=print, vision_client=client_vision, vision_model=MODELO_VISAO)
 
     carregar_memoria()
     

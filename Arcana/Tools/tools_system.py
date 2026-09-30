@@ -17,11 +17,11 @@ def _pesquisa_web(termo):
 
 
 class ToolsSystem:
-    def __init__(self, output_callback=None, vision_client=None, searcher=None):
+    def __init__(self, output_callback=None, vision_client=None, searcher=None, vision_model=None):
         self.output_callback = output_callback
         self.computer = ComputerControl(output_callback)
         self.files = FileSystem(output_callback)
-        self.screen = ScreenVision(output_callback, vision_client)
+        self.screen = ScreenVision(output_callback, vision_client, vision_model)
         self.planner = TaskPlanner()
         self.searcher = searcher or _pesquisa_web
         self.photoshop = PhotoshopIntegration(output_callback, self.computer)
@@ -243,8 +243,8 @@ class ToolsSystem:
         }
     
     @classmethod
-    def from_dict(cls, data, output_callback=None, vision_client=None):
+    def from_dict(cls, data, output_callback=None, vision_client=None, vision_model=None):
         """Create from dictionary state"""
-        instance = cls(output_callback, vision_client)
+        instance = cls(output_callback, vision_client, vision_model=vision_model)
         instance.enabled = data.get("enabled", True)
         return instance

@@ -51,6 +51,20 @@ def capturas_disponiveis():
     return motivos
 
 
+def rato_teclado_motivo():
+    """Porque é que o rato/teclado não pode funcionar, ou '' se pode.
+
+    Ter ecrã não chega: o pyautogui tem de estar instalado, e no Linux ele
+    só arranca com DISPLAY. Um relatório que diga 'rato_teclado: sim' só
+    porque existe sessão gráfica mente.
+    """
+    if not TEM_ECRA:
+        return "sem sessao grafica (DISPLAY e WAYLAND_DISPLAY por definir)"
+    if not dependencia_disponivel("pyautogui"):
+        return "o pacote 'pyautogui' nao esta instalado"
+    return ""
+
+
 def abrir_caminho(caminho):
     """Abre um ficheiro/pasta com a aplicacao por omissao do sistema."""
     if not caminho:
@@ -137,6 +151,7 @@ DEPENDENCIAS_OPCIONAIS = {
     "cv2": "overlay VTuber",
     "keyboard": "atalhos F2/F3/F4 e tecla 'home'",
     "mss": "captura de ecra no Linux",
+    "tkinter": "painel de configuracao (nao vem no Python oficial: apt install python3-tk)",
 }
 
 
@@ -180,8 +195,8 @@ CAPACIDADES = {
     "photoshop": IS_WINDOWS,
     "overlay_vtuber": IS_WINDOWS,
     "autohotkey": IS_WINDOWS,
-    "ecra": TEM_ECRA,
-    "rato_teclado": TEM_ECRA,
+    "ecra": bool(TEM_ECRA) and not capturas_disponiveis(),
+    "rato_teclado": not rato_teclado_motivo(),
     "ficheiros": True,
 }
 
@@ -196,7 +211,9 @@ def desativar_por_plataforma(log=None):
         msg("[PLATAFORMA] Photoshop desativado: depende de COM (win32com).")
     if not CAPACIDADES["ecra"]:
         motivos = ", ".join(capturas_disponiveis())
-        msg(f"[PLATAFORMA] Visao e rato/teclado desativados: {motivos}.")
+        msg(f"[PLATAFORMA] Visao desativada: {motivos}.")
+    if not CAPACIDADES["rato_teclado"]:
+        msg(f"[PLATAFORMA] Rato/teclado desativado: {rato_teclado_motivo()}.")
     if CAPACIDADES["ecra"] and SERVIDOR_GRAFICO == "wayland":
         msg("[PLATAFORMA] Wayland detetado via XWayland: so captura janelas X11.")
 

@@ -1,7 +1,18 @@
-import tkinter as tk
-from tkinter import ttk
 import json
 import os
+
+try:
+    import tkinter as tk
+    from tkinter import ttk
+    TEM_PAINEL = True
+except ImportError:
+    # python3-tk nao vem no Python oficial. Sem isto, o import deste modulo
+    # rebentava e derrubava o run.py inteiro — o painel e opcional.
+    tk = None
+    ttk = None
+    TEM_PAINEL = False
+
+MOTIVO_SEM_PAINEL = "o modulo 'tkinter' nao esta instalado (no Ubuntu/Debian: sudo apt install python3-tk)"
 
 # PADRÃO ABSOLUTO E CORRETO: brain.json
 BRAIN_FILE = "Arcana/armazen/brain.json"
@@ -15,7 +26,10 @@ REM_PINK = "#f5c2e7"
 TEXT_COLOR = "#cdd6f4"     
 TEXT_DIM = "#a6adc8"
 
-class RemCard(tk.Frame):
+class RemCard(tk.Frame if TEM_PAINEL else object):
+    # Sem tkinter esta classe nao e usada: o painel nunca arranca. A base fica
+    # `object` para o ficheiro continuar a importar, e `iniciar_gui_loop` e um
+    # no-op nesse caso.
     def __init__(self, master, text, value, variable, icon="", color=REM_BLUE, **kwargs):
         super().__init__(master, bg=SURFACE_COLOR, cursor="hand2", bd=0, **kwargs)
         self.text, self.value, self.variable, self.color = text, value, variable, color
@@ -60,7 +74,21 @@ class RemGUI:
     janela = None
 
     @classmethod
+    def disponivel(cls):
+        """O painel so existe com tkinter e sessao grafica (DISPLAY/Wayland)."""
+        from Arcana import platform_shim
+        if not TEM_PAINEL:
+            return False, MOTIVO_SEM_PAINEL
+        if not platform_shim.TEM_ECRA:
+            return False, "nao ha sessao grafica (DISPLAY/WAYLAND_DISPLAY por definir)"
+        return True, ""
+
+    @classmethod
     def iniciar_gui_loop(cls, nome_ai_override=None):
+        pode, motivo = cls.disponivel()
+        if not pode:
+            print(f"🎨 Painel de Configurações ignorado: {motivo}.")
+            return
         if cls.janela is not None: return
         
         try:

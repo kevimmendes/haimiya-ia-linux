@@ -5,9 +5,13 @@ import json
 from Arcana import platform_shim
 
 class ScreenVision:
-    def __init__(self, output_callback=None, vision_client=None):
+    def __init__(self, output_callback=None, vision_client=None, vision_model=None):
         self.output_callback = output_callback
         self.vision_client = vision_client
+        # O modelo tem de vir do .env (VISAO_MODELO). Antes estava escrito
+        # 'qwen/qwen3.8-27b' a dedo aqui, que é o modelo da Groq: com visao
+        # local no Ollama a API devolvia "model not found".
+        self.vision_model = vision_model or "qwen/qwen3.8-27b"
     
     def log(self, message):
         if self.output_callback:
@@ -49,7 +53,7 @@ class ScreenVision:
         
         try:
             res = self.vision_client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
+                model=self.vision_model,
                 messages=[{
                     "role": "user",
                     "content": [
