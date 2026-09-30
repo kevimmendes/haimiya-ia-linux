@@ -1,7 +1,8 @@
 # Haimiya IA — Linux
 
-Versão Linux da Haimiya. O teu código Windows **não foi alterado** — esta
-versão vive no branch `linux`.
+Versão Linux da Haimiya, em repositório próprio. O código Windows continua
+intacto no repositório original ([`kevimmendes/haimiya-ia`](https://github.com/kevimmendes/haimiya-ia),
+branch `master`).
 
 ## O que funciona
 
@@ -28,9 +29,8 @@ ponte wouldn’t help.
 ## Instalação
 
 ```bash
-git clone https://github.com/kevimmendes/haimiya-ia
-cd haimiya-ia
-git checkout linux
+git clone https://github.com/kevimmendes/haimiya-ia-linux
+cd haimiya-ia-linux
 
 ./setup_linux.sh
 ```

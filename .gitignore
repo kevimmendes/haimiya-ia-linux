@@ -9,6 +9,8 @@ __pycache__/
 dist/
 build/
 .env
+.venv/
+venv/
 # historico pessoal de conversas (gerado em runtime, nao deve ir para o repositorio)
 Arcana/armazen/memoria.json
 *.mp3
