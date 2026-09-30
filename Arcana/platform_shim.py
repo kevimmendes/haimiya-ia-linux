@@ -3,6 +3,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import importlib.util
 
 IS_WINDOWS = os.name == "nt"
 IS_MAC = platform.system() == "Darwin"
@@ -127,6 +128,54 @@ def capturar_ecra():
         return None
 
 
+DEPENDENCIAS_OPCIONAIS = {
+    "pyaudio": "microfone (modos de voz)",
+    "pygame": "reproducao de audio e bipes",
+    "torch": "deteccao de voz (VAD silero); sem ele, deteccao por energia",
+    "pyautogui": "rato e teclado",
+    "pygetwindow": "gestao de janelas (so Windows; no Linux o pacote aborta)",
+    "cv2": "overlay VTuber",
+    "keyboard": "atalhos F2/F3/F4 e tecla 'home'",
+    "mss": "captura de ecra no Linux",
+}
+
+
+def dependencia_disponivel(nome):
+    """Se o interpretador encontraria o modulo, sem o importar.
+
+    Importar serve para quase nada aqui: o `pyautogui` no Linux sem sessao
+    grafica levanta KeyError, e o `pygetwindow` levanta NotImplementedError.
+    Perguntar ao `find_spec` evita esses dois ao mesmo tempo.
+    """
+    try:
+        return importlib.util.find_spec(nome) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def dependencias_em_falta():
+    """[(pacote, para que serve)] do que falta, em ordem de declaracao."""
+    return [
+        (nome, para)
+        for nome, para in DEPENDENCIAS_OPCIONAIS.items()
+        if not dependencia_disponivel(nome)
+    ]
+
+
+def avisar_dependencias(msg=None):
+    """Imprime o que falta e o que deixa de funcionar. Devolve as linhas."""
+    faltam = dependencias_em_falta()
+    if not faltam:
+        return []
+    linhas = ["[OPCIONAL] Pacotes em falta — a Haimiya arranca na mesma, mas:"] + [
+        f"    - {nome}: {para}" for nome, para in faltam
+    ]
+    emitir = msg or print
+    for linha in linhas:
+        emitir(linha)
+    return linhas
+
+
 CAPACIDADES = {
     "photoshop": IS_WINDOWS,
     "overlay_vtuber": IS_WINDOWS,
@@ -159,6 +208,7 @@ def descrever_ambiente():
         f"ecra         : {SERVIDOR_GRAFICO}",
         f"backend ecra : {detetar_backend_ecra()}",
         f"xdg-open     : {'sim' if tem_ferramenta('xdg-open') else 'nao'}",
+        f"deps opcionais: {len(DEPENDENCIAS_OPCIONAIS) - len(dependencias_em_falta())}/{len(DEPENDENCIAS_OPCIONAIS)} instaladas",
     ]
     for nome, ok in CAPACIDADES.items():
         linhas.append(f"{nome:<12}: {'sim' if ok else 'nao'}")

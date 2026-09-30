@@ -124,6 +124,34 @@ print(ps.descrever_ambiente())
 O arranque também imprime isto. Se aparecer `ecra: nao`, é falta de sessão
 gráfica — a voz continua a funcionar, a visão não.
 
+## Arrancar sem ecrã (servidor, SSH, container)
+
+A Haimiya arranca na mesma sem sessão gráfica. No arranque vais ver:
+
+```
+[PLATAFORMA] Visao e rato/teclado desativados: sem sessao grafica (...)
+[OPCIONAL] Pacotes em falta — a Haimiya arranca na mesma, mas:
+    - pygame: reproducao de audio e bipes
+    - torch: deteccao de voz (VAD silero); sem ele, deteccao por energia
+```
+
+Fica a funcionar sem ecrã: cérebro, memória, chat, pesquisa web, ficheiros,
+planeador de tarefas, teoria musical e o dispatch de ferramentas
+(`ToolsSystem`). Desliga: visão de ecrã, rato/teclado, painel de configuração
+(tkinter) e atalhos F2/F3/F4.
+
+Nada disto faz a app morrer no arranque — cada peça recusa com motivo em vez
+de rebentar. Para ligar o que falta:
+
+```bash
+pip install pygame            # áudio
+pip install torch torchaudio  # VAD (pesado; sem ele a voz é mais ruidosa)
+pip install pyautogui         # rato e teclado (precisa de DISPLAY)
+```
+
+`pygetwindow` não entra de propósito: só existe para Windows, e a gestão de
+janelas fica desativada com aviso.
+
 ## Como foi portado
 
 Um único ficheiro novo, `Arcana/platform_shim.py`, concentra as diferenças
@@ -133,6 +161,8 @@ de plataforma. Ele deteta o sistema e o servidor gráfico e expõe:
 - `abrir_caminho()` — `xdg-open` no Linux, `os.startfile` no Windows
 - `lancar_comando()` — executa do PATH, com URLs via `xdg-open`
 - `CAPACIDADES` — o que está disponível, para desligar o resto com aviso
+- `dependencias_em_falta()` / `avisar_dependencias()` — pacotes opcionais em
+  falta e o que deixa de funcionar por causa disso
 
 Alterações nos ficheiros existentes:
 
@@ -143,6 +173,7 @@ Alterações nos ficheiros existentes:
 | `Arcana/Tools/file_system.py` | `os.startfile` → `platform_shim.abrir_caminho()` |
 | `Arcana/Aura/app_launcher.py` | `start {target}` → shim; dicionário Linux; `winsound` removido; `keyboard` opcional |
 | `run.py` | `ImageGrab` → shim; overlay gateado; `keyboard` opcional; aviso de ambiente |
+| `Arcana/Tools/computer_control.py` | `pyautogui` e `pygetwindow` opcionais; cada ação recusa com motivo sem ecrã |
 
 ### Detalhe de segurança
 

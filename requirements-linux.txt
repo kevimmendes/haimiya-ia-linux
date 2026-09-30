@@ -14,17 +14,20 @@ python-dotenv
 requests
 edge-tts
 numpy
-torch
-torchaudio
 pyaudio
 pygame
+
+# torch/torchaudio servem só para o VAD silero (deteção de quando o-utilizador
+# está a falar). São pesados; sem eles a voz funciona na mesma, com deteção
+# por energia. Instala se quiseres menos falsos positivos.
+torch
+torchaudio
 
 # --- visão e automação de ecrã ---
 Pillow
 mss
 opencv-python
 pyautogui
-pygetwindow
 psutil
 
 # --- pesquisa web ---
@@ -39,4 +42,5 @@ PyQt5
 keyboard
 
 # --- ausentes no requirements.txt original, mas usados no código ---
-# pygetwindow é importado em computer_control.py e não estava declarado.
+# pygetwindow foi removido de propósito: só tem versão para Windows e aborta
+# com NotImplementedError no Linux. A gestão de janelas fica desativada.

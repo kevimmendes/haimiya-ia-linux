@@ -6,13 +6,10 @@ import json
 import re
 import io
 import wave
-import torch
 import numpy as np
-import pyaudio
 import requests
 import edge_tts
 import random
-import pygame
 import threading
 import os
 import base64
@@ -31,6 +28,24 @@ try:
     import keyboard
 except Exception:
     keyboard = None
+
+# Estas tres so servem para a voz: audio (pyaudio), VAD (torch) e
+# reproducao (pygame). Se faltarem, a Haimiya arranca na mesma e o modo
+# chat funciona — cada uma diz o que perdeu em vez de a app morrer no import.
+try:
+    import torch
+except Exception:
+    torch = None
+
+try:
+    import pyaudio
+except Exception:
+    pyaudio = None
+
+try:
+    import pygame
+except Exception:
+    pygame = None
 
 
 def tecla_pressionada(nome):
@@ -79,6 +94,11 @@ for _stream in (sys.stdout, sys.stderr):
 # Por isso o texto vai no qwen, que nao tem esse campo.
 MODELO_LLM = "qwen/qwen3.8-27b"             # cerebro principal (texto)
 MODELO_TRANSCRICAO = "whisper-large-v3-turbo"  # voz -> texto
+
+# O .env tem de estar carregado ANTES de ler seja o que for com os.getenv().
+# O load_dotenv() estava mais abaixo, depois desta secção, e a visao lia o
+# default "groq" em vez do que estava no ficheiro.
+load_dotenv()
 
 # 👁️ VISÃO:GROQ (cloud) ou LOCAL (Ollama / LM Studio)
 # Tudo pelo .env, sem mexer em codigo. O pedido de visao ja e no formato
@@ -163,8 +183,7 @@ import Arcana.Net.search_ddg as search_ddg
 # 🔥 IMPORTAÇÃO DO SEU MÓDULO DE AUTOMAÇÃO DE APPS
 from Arcana.Aura.app_launcher import AppLauncher 
 
-# Carrega as chaves do ficheiro .env
-load_dotenv()
+# As chaves vem do .env, ja carregado em cima.
 GROQ_API_KEY_LLM = os.getenv("GROQ_API_KEY_LLM")
 GROQ_API_KEY_VISION = os.getenv("GROQ_API_KEY_VISION")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY") # Chave da NVIDIA
@@ -596,6 +615,8 @@ def construir_historico_para_api(sys_prompt, memoria, nome_ai, launcher=None):
 #region 🎵 FEEDBACKS SONOROS E ÁUDIO
 # ======================================================
 def play_beep(tipo="inicio"):
+    if pygame is None:
+        return
     try:
         pygame.mixer.init(frequency=44100, size=-16, channels=2)
         duration = 0.1
@@ -617,6 +638,9 @@ class LocalVoiceFilter:
         # pergunta interativamente "confia neste repositorio?" e bloqueia o arranque.
         # E se falhar, a app nao pode morrer: a voz tem de continuar a funcionar.
         self.model = None
+        if torch is None:
+            print(" Aviso: 'torch' nao instalado. A usar deteccao por energia (mais ruidosa).")
+            return
         try:
             self.model, _ = torch.hub.load(
                 repo_or_dir='snakers4/silero-vad',
@@ -647,6 +671,9 @@ class LocalVoiceFilter:
 
 async def microsoft_speak(text): 
     if not text: return
+    if pygame is None:
+        print(" (sem 'pygame': a voz foi gerada mas nao ha como a reproduzir aqui)")
+        return
     VOICE = "pt-BR-FranciscaNeural" 
     output_file = "vocal_.mp3"
     
@@ -1190,6 +1217,10 @@ async def processar_ia(client_nvidia, client_llm, client_vision, sys_prompt, tex
 # region 🎤 MODOS DE OPERAÇÃO
 # ======================================================
 async def run_modo_continuo(client_nvidia, client_llm, client_vision, sys_prompt, voice_filter, api_key_whisper, nome_ai, usuario_nome, launcher):
+    if pyaudio is None:
+        print(" Modo de voz indisponivel: o pacote 'pyaudio' nao esta instalado.")
+        print(" Instala com: pip install pyaudio   (no Ubuntu: sudo apt install portaudio19-dev)")
+        return
     print("\n" + "="*30)
     print(" MODO VOZ ATIVA (ESCUTA CONTÍNUA)")
     print("F1: Gatilho de Voz | F2: Visão Computacional | HOME: Menu")
@@ -1226,6 +1257,10 @@ async def run_modo_continuo(client_nvidia, client_llm, client_vision, sys_prompt
     stream.stop_stream(); stream.close(); p.terminate()
     
 async def run_modo_click(client_nvidia, client_llm, client_vision, sys_prompt, api_key_whisper, nome_ai, usuario_nome, launcher):
+    if pyaudio is None:
+        print(" Click-to-talk indisponivel: o pacote 'pyaudio' nao esta instalado.")
+        print(" Instala com: pip install pyaudio   (no Ubuntu: sudo apt install portaudio19-dev)")
+        return
     print("\n" + "="*30)
     print(" MODO CLICK-TO-TALK")
     print("R-SHIFT: Clica Grava / Clica Envia")
@@ -1292,17 +1327,28 @@ async def main():
     print("🖥️  Ambiente:")
     print(platform_shim.descrever_ambiente())
     platform_shim.desativar_por_plataforma()
+    platform_shim.avisar_dependencias()
     print()
 
-    print(f"🎨 Iniciando Painel de Configurações em segundo plano (Pressione F4 para acessar)...")
-    gui_thread = threading.Thread(target=RemGUI.iniciar_gui_loop, args=(nome_ai,), daemon=True)
-    gui_thread.start()
+    if platform_shim.TEM_ECRA:
+        print("🎨 Iniciando Painel de Configurações em segundo plano (Pressione F4 para acessar)...")
+        gui_thread = threading.Thread(target=RemGUI.iniciar_gui_loop, args=(nome_ai,), daemon=True)
+        gui_thread.start()
+    else:
+        print("🎨 Painel de Configurações ignorado: tkinter precisa de uma sessão gráfica.")
 
     # 🔥 REGISTRANDO OS ATALHOS GLOBAIS ABSOLUTOS (AGORA APENAS UMA ÚNICA VEZ!)
     if keyboard is not None:
-        keyboard.add_hotkey('f4', RemGUI.toggle)
-        keyboard.on_press_key('f2', toggle_visao)
-        keyboard.on_press_key('f3', toggle_gatilho)
+        try:
+            keyboard.add_hotkey('f4', RemGUI.toggle)
+            keyboard.on_press_key('f2', toggle_visao)
+            keyboard.on_press_key('f3', toggle_gatilho)
+        except Exception as e:
+            # Sem privilegio no grupo 'input' o 'keyboard' instala mas rebenta ao
+            # registar. Melhor um aviso do que perder a app toda aqui.
+            print(f"⚠️  Atalhos F2/F3/F4 desligados: {e}")
+            print("    No Linux o pacote 'keyboard' exige privilégios.")
+            print("    Para os ativar: sudo usermod -aG input \"$USER\" e reinicia a sessão.")
     else:
         print("⚠️  Atalhos F2/F3/F4 e a tecla 'home' ficam desligados.")
         print("    No Linux o pacote 'keyboard' exige privilégios.")

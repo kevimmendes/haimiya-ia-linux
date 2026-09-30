@@ -5,12 +5,20 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-import cv2
-import numpy as np
-import win32gui
-import win32ui
-import win32con
+try:
+    import cv2
+    import win32gui
+    import win32ui
+    import win32con
+except ImportError as e:
+    sys.exit(
+        f"O overlay VTuber e so Windows: falta '{e.name}'.\n"
+        "O run.py nunca o arranca no Linux (ver platform_shim.CAPACIDADES)."
+    )
+
 import keyboard
+
+import numpy as np
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
