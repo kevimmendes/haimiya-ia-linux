@@ -152,6 +152,22 @@ pip install pyautogui         # rato e teclado (precisa de DISPLAY)
 `pygetwindow` não entra de propósito: só existe para Windows, e a gestão de
 janelas fica desativada com aviso.
 
+## A GUI
+
+O painel de configuração é **tkinter**; o overlay VTuber é **PyQt5 + Win32**.
+
+| GUI | Ficheiro | No Linux |
+|---|---|---|
+| Painel de configuração (F4 e opção 5) | `Arcana/Apps/gui_handler.py` | Funciona com `python3-tk` e sessão gráfica |
+| Overlay VTuber | `Arcana/Net/vtuber_overlay.py` | **Só Windows** (`win32gui`/`win32ui`) |
+
+O painel precisa das duas coisas: `sudo apt install python3-tk` **e** um
+`$DISPLAY`. Sem qualquer uma, o arranque imprime o motivo e continua.
+
+Em Wayland puro o tkinter funciona (é o XWayland que dá o `DISPLAY`), ao
+contrário da captura de ecrã. Num servidor ou por SSH não há painel: muda o
+cérebro e o Discord a editar `Arcana/armazen/brain.json`.
+
 ## Como foi portado
 
 Um único ficheiro novo, `Arcana/platform_shim.py`, concentra as diferenças
